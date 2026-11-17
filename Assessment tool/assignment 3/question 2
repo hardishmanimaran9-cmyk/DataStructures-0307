@@ -1,0 +1,151 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct N {
+    int k, h;
+    struct N *l, *r;
+} N;
+
+int H(N *n) {
+    return n ? n->h : 0;
+}
+
+int mx(int a, int b) {
+    return a > b ? a : b;
+}
+
+void fix(N *n) {
+    n->h = 1 + mx(H(n->l), H(n->r));
+}
+
+int bf(N *n) {
+    return n ? H(n->l) - H(n->r) : 0;
+}
+
+N *node(int k) {
+    N *n = malloc(sizeof *n);
+
+    if (!n) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+
+    n->k = k;
+    n->h = 1;
+    n->l = n->r = NULL;
+
+    return n;
+}
+
+
+N *right(N *y) {
+    N *x = y->l;
+    N *t = x->r;
+
+    x->r = y;
+    y->l = t;
+
+    fix(y);
+    fix(x);
+
+    return x;
+}
+
+/* Left Rotation */
+N *left(N *x) {
+    N *y = x->r;
+    N *t = y->l;
+
+    y->l = x;
+    x->r = t;
+
+    fix(x);
+    fix(y);
+
+    return y;
+}
+
+/* AVL Insertion */
+N *ins(N *n, int k) {
+    if (!n)
+        return node(k);
+
+    if (k < n->k)
+        n->l = ins(n->l, k);
+    else if (k > n->k)
+        n->r = ins(n->r, k);
+    else
+        return n;
+
+    fix(n);
+
+    int b = bf(n);
+
+    /* LL Case */
+    if (b > 1 && k < n->l->k)
+        return right(n);
+
+    /* RR Case */
+    if (b < -1 && k > n->r->k)
+        return left(n);
+
+    /* LR Case */
+    if (b > 1 && k > n->l->k) {
+        n->l = left(n->l);
+        return right(n);
+    }
+
+    /* RL Case */
+    if (b < -1 && k < n->r->k) {
+        n->r = right(n->r);
+        return left(n);
+    }
+
+    return n;
+}
+
+/* Preorder Traversal */
+void pre(N *n) {
+    if (n) {
+        printf("%d(h=%d, bf=%d) ", n->k, n->h, bf(n));
+        pre(n->l);
+        pre(n->r);
+    }
+}
+
+/* Check AVL Balance and Heights */
+int valid(N *n) {
+    return !n ||
+        (bf(n) >= -1 && bf(n) <= 1 &&
+         valid(n->l) && valid(n->r));
+}
+
+/* Free Memory */
+void freeall(N *n) {
+    if (n) {
+        freeall(n->l);
+        freeall(n->r);
+        free(n);
+    }
+}
+
+int main(void) {
+
+    int a[] = {10, 20, 30, 40, 50, 25};
+    N *r = NULL;
+
+    for (int i = 0; i < 6; i++) {
+        r = ins(r, a[i]);
+
+        printf("After %d: ", a[i]);
+        pre(r);
+        puts("");
+    }
+
+    printf("AVL valid = %s, height = %d\n",
+           valid(r) ? "yes" : "no", H(r));
+
+    freeall(r);
+
+    return 0;
+}
