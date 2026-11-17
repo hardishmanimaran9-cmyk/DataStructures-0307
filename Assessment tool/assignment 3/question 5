@@ -1,0 +1,105 @@
+#include <stdio.h>
+#include <stdlib.h>
+typedef struct N {
+    int k;
+    struct N*l, *r;
+}
+N;
+N*make(int k) {
+    N*n=malloc(sizeof*n);
+    if(!n)exit(1);
+    n->k=k;
+    n->l=n->r=NULL;
+    return n;
+}
+N*R(N*x) {
+    N*y=x->l;
+    x->l=y->r;
+    y->r=x;
+    return y;
+}
+N*L(N*x) {
+    N*y=x->r;
+    x->r=y->l;
+    y->l=x;
+    return y;
+}
+N*splay(N*t, int k) {
+    if(!t||t->k==k)return t;
+    if(k<t->k) {
+        if(!t->l)return t;
+        if(k<t->l->k) {
+            t->l->l=splay(t->l->l, k);
+            t=R(t);
+        }
+        else if(k>t->l->k) {
+            t->l->r=splay(t->l->r, k);
+            if(t->l->r)t->l=L(t->l);
+        }
+        return t->l?R(t):t;
+    }
+    else {
+        if(!t->r)return t;
+        if(k>t->r->k) {
+            t->r->r=splay(t->r->r, k);
+            t=L(t);
+        }
+        else if(k<t->r->k) {
+            t->r->l=splay(t->r->l, k);
+            if(t->r->l)t->r=R(t->r);
+        }
+        return t->r?L(t):t;
+    }
+}
+N*insert(N*t, int k) {
+    if(!t)return make(k);
+    t=splay(t, k);
+    if(t->k==k)return t;
+    N*n=make(k);
+    if(k<t->k) {
+        n->r=t;
+        n->l=t->l;
+        t->l=NULL;
+    }
+    else {
+        n->l=t;
+        n->r=t->r;
+        t->r=NULL;
+    }
+    return n;
+}
+N*search(N*t, int k, int*f) {
+    t=splay(t, k);
+    *f=t&&t->k==k;
+    return t;
+}
+void in(N*t) {
+    if(t) {
+        in(t->l);
+        printf("%d ", t->k);
+        in(t->r);
+    }
+}
+void freeall(N*t) {
+    if(t) {
+        freeall(t->l);
+        freeall(t->r);
+        free(t);
+    }
+}
+int main(void) {
+    int a[]= {
+        5, 3, 8, 1, 4, 7, 9, 6, 2
+    }
+    , f;
+    N*t=NULL;
+    for(int i=0;i<9;i++)t=insert(t, a[i]);
+    in(t);
+    puts("");
+    t=search(t, 3, &f);
+    printf("3 found=%d root=%d\n", f, t->k);
+    t=search(t, 9, &f);
+    printf("9 found=%d root=%d\n", f, t->k);
+    freeall(t);
+    return 0;
+}
