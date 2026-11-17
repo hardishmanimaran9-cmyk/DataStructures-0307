@@ -1,0 +1,144 @@
+#include <stdio.h>
+#include <stdlib.h>
+typedef enum {
+    RED, BLACK
+}
+Color;
+typedef struct N {
+    int k;
+    Color c;
+    struct N*l, *r, *p;
+}
+N;
+N*root=NULL;
+N*make(int k) {
+    N*n=malloc(sizeof*n);
+    if(!n)exit(1);
+    n->k=k;
+    n->c=RED;
+    n->l=n->r=n->p=NULL;
+    return n;
+}
+void L(N*x) {
+    N*y=x->r;
+    x->r=y->l;
+    if(y->l)y->l->p=x;
+    y->p=x->p;
+    if(!x->p)root=y;
+    else if(x==x->p->l)x->p->l=y;
+    else x->p->r=y;
+    y->l=x;
+    x->p=y;
+}
+void R(N*y) {
+    N*x=y->l;
+    y->l=x->r;
+    if(x->r)x->r->p=y;
+    x->p=y->p;
+    if(!y->p)root=x;
+    else if(y==y->p->l)y->p->l=x;
+    else y->p->r=x;
+    x->r=y;
+    y->p=x;
+}
+void fix(N*z) {
+    while(z->p&&z->p->c==RED) {
+        N*p=z->p, *g=p->p;
+        if(p==g->l) {
+            N*u=g->r;
+            if(u&&u->c==RED) {
+                p->c=u->c=BLACK;
+                g->c=RED;
+                z=g;
+            }
+            else {
+                if(z==p->r) {
+                    z=p;
+                    L(z);
+                    p=z->p;
+                    g=p->p;
+                }
+                p->c=BLACK;
+                g->c=RED;
+                R(g);
+            }
+        }
+        else {
+            N*u=g->l;
+            if(u&&u->c==RED) {
+                p->c=u->c=BLACK;
+                g->c=RED;
+                z=g;
+            }
+            else {
+                if(z==p->l) {
+                    z=p;
+                    R(z);
+                    p=z->p;
+                    g=p->p;
+                }
+                p->c=BLACK;
+                g->c=RED;
+                L(g);
+            }
+        }
+    }
+    root->c=BLACK;
+}
+void ins(int k) {
+    N*z=make(k), *p=NULL, *x=root;
+    while(x) {
+        p=x;
+        if(k==x->k) {
+            free(z);
+            return;
+        }
+        x=k<x->k?x->l:x->r;
+    }
+    z->p=p;
+    if(!p)root=z;
+    else if(k<p->k)p->l=z;
+    else p->r=z;
+    fix(z);
+}
+int redok(N*n) {
+    if(!n)return 1;
+    if(n->c==RED&&((n->l&&n->l->c==RED)||(n->r&&n->r->c==RED)))return 0;
+    return redok(n->l)&&redok(n->r);
+}
+int bh(N*n) {
+    if(!n)return 1;
+    int a=bh(n->l), b=bh(n->r);
+    if(a<0||a!=b)return -1;
+    return a+(n->c==BLACK);
+}
+N*min(N*n) {
+    while(n&&n->l)n=n->l;
+    return n;
+}
+void inorder(N*n) {
+    if(n) {
+        inorder(n->l);
+        printf("%d(%c) ", n->k, n->c==RED?'R':'B');
+        inorder(n->r);
+    }
+}
+void freeall(N*n) {
+    if(n) {
+        freeall(n->l);
+        freeall(n->r);
+        free(n);
+    }
+}
+int main(void) {
+    int a[]= {
+        10, 20, 30, 15, 25, 5
+    }
+    ;
+    for(int i=0;i<6;i++)ins(a[i]);
+    inorder(root);
+    printf("\nroot black=%d red rule=%d black-height=%d min=%d\n", root->c==BLACK, redok(root), bh(root)>=0, min(root)->k);
+    freeall(root);
+    root=NULL;
+    return 0;
+}
