@@ -1,0 +1,54 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define N 100000
+#define M 131071
+#define LEN 16
+unsigned poor(const char *s) {
+    return ((unsigned char)s[0] + (unsigned char)s[1]) % M;
+}
+unsigned polynomial(const char *s) {
+    unsigned h = 0;
+    while (*s) h = h * 31u + (unsigned char)*s++;
+    return h % M;
+}
+unsigned fnv1a(const char *s) {
+    unsigned h = 2166136261u;
+    while (*s) {
+        h ^= (unsigned char)*s++;
+        h *= 16777619u;
+    }
+    return h % M;
+}
+void measure(const char *label, unsigned (*fn)(const char *),
+char reg[N][LEN]) {
+    unsigned *count = calloc(M, sizeof *count);
+    if (!count) {
+        perror("calloc");
+        exit(EXIT_FAILURE);
+    }
+    for (int i=0; i<N; ++i) count[fn(reg[i])]++;
+    unsigned occupied=0, longest=0;
+    for (unsigned i=0; i<M; ++i) {
+        if (count[i]) occupied++;
+        if (count[i]>longest) longest=count[i];
+    }
+    printf("%s: occupied=%u longest-chain=%u\n",
+    label, occupied, longest);
+    free(count);
+}
+int main(void) {
+    char (*reg)[LEN] = malloc((size_t)N * sizeof *reg);
+    if (!reg) {
+        perror("malloc");
+        return 1;
+    }
+    for (int i=0; i<N; ++i)
+    snprintf(reg[i], LEN, "TN%02d%c%c%04d",
+    i%99+1, 'A'+(i/26)%26, 'A'+i%26, i%10000);
+    measure("State-only", poor, reg);
+    measure("Polynomial", polynomial, reg);
+    measure("FNV-1a", fnv1a, reg);
+    free(reg);
+    return 0;
+}
