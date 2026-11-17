@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#define A 26
+typedef struct N {
+    struct N*c[A];
+    int words, end;
+}
+N;
+N*make(void) {
+    N*n=calloc(1, sizeof *n);
+    if(!n)exit(1);
+    return n;
+}
+int ix(char c) {
+    c=(char)tolower((unsigned char)c);
+    return c>='a'&&c<='z'?c-'a':-1;
+}
+void insert(N*r, const char*w) {
+    N*t=r, *path[1024];
+    int z=0;
+    path[z++]=r;
+    for(;*w;w++) {
+        int i=ix(*w);
+        if(i<0)continue;
+        if(!t->c[i])t->c[i]=make();
+        t=t->c[i];
+        if(z<1024)path[z++]=t;
+    }
+    if(!t->end) {
+        t->end=1;
+        for(int i=0;i<z;i++)path[i]->words++;
+    }
+}
+N*walk(N*r, const char*s) {
+    for(;*s;s++) {
+        int i=ix(*s);
+        if(i<0||!r->c[i])return NULL;
+        r=r->c[i];
+    }
+    return r;
+}
+int search(N*r, const char*w) {
+    N*t=walk(r, w);
+    return t&&t->end;
+}
+int count(N*r, const char*p) {
+    N*t=walk(r, p);
+    return t?t->words:0;
+}
+void list(N*t, char*b, int d) {
+    if(!t)return;
+    if(t->end) {
+        b[d]=0;
+        puts(b);
+    }
+    for(int i=0;i<A;i++)if(t->c[i]) {
+        b[d]='a'+i;
+        list(t->c[i], b, d+1);
+    }
+}
+void autocomplete(N*r, const char*p) {
+    N*t=walk(r, p);
+    if(!t) {
+        puts("(none)");
+        return;
+    }
+    char b[1024];
+    int d=(int)strlen(p);
+    memcpy(b, p, (size_t)d);
+    list(t, b, d);
+}
+int remove_word(N*r, const char*w) {
+    N*t=walk(r, w);
+    if(!t||!t->end)return 0;
+    t->end=0;
+    return 1;
+}
+int recount(N*t) {
+    if(!t)return 0;
+    int n=t->end;
+    for(int i=0;i<A;i++)n+=recount(t->c[i]);
+    t->words=n;
+    return n;
+}
+void freeall(N*t) {
+    if(t) {
+        for(int i=0;i<A;i++)freeall(t->c[i]);
+        free(t);
+    }
+}
+int main(void) {
+    const char*a[]= {
+        "anand", "anitha", "anu", "arun", "bala", "anusuya"
+    }
+    ;
+    N*r=make();
+    for(int i=0;i<6;i++)insert(r, a[i]);
+    char*p[]= {
+        "a", "an", "anu", "b", "z"
+    }
+    ;
+    for(int i=0;i<5;i++)printf("%s:%d ", p[i], count(r, p[i]));
+    puts("");
+    printf("anand=%d\n", search(r, "anand"));
+    puts("Autocomplete an:");
+    autocomplete(r, "an");
+    remove_word(r, "anu");
+    recount(r);
+    printf("after delete anu, an=%d\n", count(r, "an"));
+    freeall(r);
+    return 0;
+}
