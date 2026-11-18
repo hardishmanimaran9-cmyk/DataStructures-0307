@@ -1,0 +1,69 @@
+#include &lt;stdio.h&gt;
+#define MAX 32
+typedef struct {
+int severity;
+int patient;
+unsigned long arrival;
+}
+Case;
+Case heap[MAX];
+int size=0;
+unsigned long sequence_no=0;
+int higher(Case a, Case b) {
+if(a.severity!=b.severity)return a.severity&gt;b.severity;
+return a.arrival&lt;b.arrival;
+
+Assignment 4 | Page 11
+
+}
+void swap(Case *a, Case *b) {
+Case t=*a;
+*a=*b;
+*b=t;
+}
+void push(int severity, int patient) {
+if(size==MAX)return;
+heap[size]=(Case) {
+severity, patient, sequence_no++
+}
+;
+int i=size++;
+while(i&gt;0) {
+int p=(i-1)/2;
+if(!higher(heap[i], heap[p]))break;
+swap(&amp;heap[i], &amp;heap[p]);
+i=p;
+}
+}
+Case pop(void) {
+Case empty= {
+-1, -1, 0
+}
+;
+if(size==0)return empty;
+Case top=heap[0];
+heap[0]=heap[--size];
+int i=0;
+for(;;) {
+int l=2*i+1, r=l+1, best=i;
+if(l&lt;size&amp;&amp;higher(heap[l], heap[best]))best=l;
+if(r&lt;size&amp;&amp;higher(heap[r], heap[best]))best=r;
+if(best==i)break;
+swap(&amp;heap[i], &amp;heap[best]);
+i=best;
+}
+return top;
+}
+int main(void) {
+int severity[]= {
+3, 9, 5, 7, 1, 8
+}
+;
+for(int p=0;p&lt;6;p++)push(severity[p], 101+p);
+while(size) {
+Case c=pop();
+printf(&quot;P%d(%d) &quot;, c.patient, c.severity);
+}
+putchar(&#39;\n&#39;);
+return 0;
+}
