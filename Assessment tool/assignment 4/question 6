@@ -1,0 +1,176 @@
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#define BUCKETS 1009
+#define MAX_ORDERS 200000
+typedef struct Order {
+char id[20], restaurant[32];
+int amount, promised, now, active, assigned;
+unsigned long arrival;
+struct Order *next;
+}
+Order;
+Order *table[BUCKETS];
+Order *heap[MAX_ORDERS];
+int hs=0;
+unsigned long seq=0;
+unsigned hash_id(const char*s) {
+unsigned h=0;
+while(*s)h=h*31u+(unsigned char)*s++;
+return h%BUCKETS;
+}
+int late(const Order*o) {
+int x=o-&gt;now-o-&gt;promised;
+return x&gt;0?x:0;
+}
+int higher(const Order*a, const Order*b) {
+if(late(a)!=late(b))return late(a)&gt;late(b);
+return a-&gt;arrival&lt;b-&gt;arrival;
+}
+void swap(Order**a, Order**b) {
+Order*t=*a;
+*a=*b;
+*b=t;
+}
+Order*find_order(const char*id) {
+for(Order*o=table[hash_id(id)];o;o=o-&gt;next)
+if(strcmp(o-&gt;id, id)==0)return o;
+return NULL;
+}
+void hash_insert(Order*o) {
+unsigned b=hash_id(o-&gt;id);
+o-&gt;next=table[b];
+table[b]=o;
+}
+void hash_remove(const char*id) {
+Order**p=&amp;table[hash_id(id)];
+while(*p) {
+Order*o=*p;
+if(strcmp(o-&gt;id, id)==0) {
+*p=o-&gt;next;
+o-&gt;next=NULL;
+return;
+}
+p=&amp;o-&gt;next;
+}
+}
+void push(Order*o) {
+if(hs==MAX_ORDERS)return;
+int i=hs++;
+heap[i]=o;
+while(i&gt;0) {
+
+
+
+int p=(i-1)/2;
+if(!higher(heap[i], heap[p]))break;
+swap(&amp;heap[i], &amp;heap[p]);
+i=p;
+}
+}
+Order*pop(void) {
+if(!hs)return NULL;
+Order*t=heap[0];
+heap[0]=heap[--hs];
+int i=0;
+for(;;) {
+int l=2*i+1, r=l+1, b=i;
+if(l&lt;hs&amp;&amp;higher(heap[l], heap[b]))b=l;
+if(r&lt;hs&amp;&amp;higher(heap[r], heap[b]))b=r;
+if(b==i)break;
+swap(&amp;heap[i], &amp;heap[b]);
+i=b;
+}
+return t;
+}
+int place(const char*id, const char*rest, int amount, int promised, int now) {
+if(find_order(id)||hs==MAX_ORDERS)return 0;
+Order*o=calloc(1, sizeof*o);
+if(!o)return 0;
+snprintf(o-&gt;id, sizeof o-&gt;id, &quot;%s&quot;, id);
+snprintf(o-&gt;restaurant, sizeof o-&gt;restaurant, &quot;%s&quot;, rest);
+o-&gt;amount=amount;
+o-&gt;promised=promised;
+o-&gt;now=now;
+o-&gt;active=1;
+o-&gt;arrival=seq++;
+hash_insert(o);
+push(o);
+return 1;
+}
+int cancel(const char*id) {
+Order*o=find_order(id);
+if(!o||!o-&gt;active)return 0;
+o-&gt;active=0;
+hash_remove(id);
+return 1;
+}
+Order*assign_next(void) {
+while(hs) {
+Order*o=pop();
+if(!o-&gt;active) {
+free(o);
+continue;
+}
+o-&gt;active=0;
+o-&gt;assigned=1;
+hash_remove(o-&gt;id);
+return o;
+}
+return NULL;
+}
+int cmp(const Order*a, const Order*b) {
+int c=strcmp(a-&gt;restaurant, b-&gt;restaurant);
+if(c)return c;
+if(a-&gt;amount!=b-&gt;amount)return a-&gt;amount&lt;b-&gt;amount?-1:1;
+return 0;
+}
+void report_sort(Order*a[], Order*t[], int lo, int hi) {
+if(lo&gt;=hi)return;
+int m=lo+(hi-lo)/2;
+report_sort(a, t, lo, m);
+report_sort(a, t, m+1, hi);
+int i=lo, j=m+1, k=lo;
+while(i&lt;=m&amp;&amp;j&lt;=hi) {
+if(cmp(a[i], a[j])&lt;=0)t[k++]=a[i++];
+else t[k++]=a[j++];
+}
+
+
+
+while(i&lt;=m)t[k++]=a[i++];
+while(j&lt;=hi)t[k++]=a[j++];
+for(i=lo;i&lt;=hi;i++)a[i]=t[i];
+}
+int main(void) {
+place(&quot;O1001&quot;, &quot;SpiceHub&quot;, 250, 30, 55);
+place(&quot;O1002&quot;, &quot;GreenBowl&quot;, 180, 40, 70);
+place(&quot;O1003&quot;, &quot;SpiceHub&quot;, 150, 35, 80);
+place(&quot;O1004&quot;, &quot;CafeOne&quot;, 300, 60, 65);
+place(&quot;O1005&quot;, &quot;GreenBowl&quot;, 220, 45, 90);
+printf(&quot;Lookup O1003: %s\n&quot;, find_order(&quot;O1003&quot;)?&quot;found&quot;:&quot;not found&quot;);
+printf(&quot;Cancel O1004: %s\n&quot;, cancel(&quot;O1004&quot;)?&quot;cancelled&quot;:&quot;not found&quot;);
+Order*next=assign_next();
+if(next) {
+printf(&quot;Assigned: %s overdue=%d\n&quot;, next-&gt;id, late(next));
+free(next);
+}
+Order*items[32], *tmp[32];
+int n=0;
+for(int b=0;b&lt;BUCKETS;b++)for(Order*o=table[b];o;o=o-&gt;next)
+if(o-&gt;active&amp;&amp;n&lt;32)items[n++]=o;
+if(n&gt;0)report_sort(items, tmp, 0, n-1);
+puts(&quot;Active order report:&quot;);
+for(int i=0;i&lt;n;i++)printf(&quot;%s %s %d\n&quot;, items[i]-&gt;id, items[i]-&gt;restaurant, items[i]-&gt;amount);
+for(int b=0;b&lt;BUCKETS;b++) {
+Order*o=table[b];
+while(o) {
+Order*x=o-&gt;next;
+free(o);
+o=x;
+}
+table[b]=NULL;
+}
+hs=0;
+return 0;
+}
