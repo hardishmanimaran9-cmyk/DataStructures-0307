@@ -1,0 +1,169 @@
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;time.h&gt;
+typedef struct {
+int id, amount;
+}
+Order;
+long long cmp;
+void bubble(Order a[], int n) {
+for(int i=0;i&lt;n-1;i++) {
+int changed=0;
+for(int j=0;j&lt;n-i-1;j++) {
+cmp++;
+if(a[j].amount&gt;a[j+1].amount) {
+Order t=a[j];
+a[j]=a[j+1];
+a[j+1]=t;
+changed=1;
+}
+}
+if(!changed)break;
+}
+}
+void insertion(Order a[], int n) {
+for(int i=1;i&lt;n;i++) {
+Order x=a[i];
+int j=i-1;
+while(j&gt;=0) {
+cmp++;
+if(a[j].amount&lt;=x.amount)break;
+a[j+1]=a[j];
+j--;
+}
+a[j+1]=x;
+}
+}
+void selection(Order a[], int n) {
+for(int i=0;i&lt;n-1;i++) {
+int m=i;
+for(int j=i+1;j&lt;n;j++) {
+cmp++;
+if(a[j].amount&lt;a[m].amount)m=j;
+}
+if(m!=i) {
+
+Order t=a[i];
+a[i]=a[m];
+a[m]=t;
+}
+}
+}
+void merge(Order a[], Order t[], int lo, int mid, int hi) {
+int i=lo, j=mid+1, k=lo;
+while(i&lt;=mid&amp;&amp;j&lt;=hi) {
+cmp++;
+if(a[i].amount&lt;=a[j].amount)t[k++]=a[i++];
+else t[k++]=a[j++];
+}
+while(i&lt;=mid)t[k++]=a[i++];
+while(j&lt;=hi)t[k++]=a[j++];
+for(i=lo;i&lt;=hi;i++)a[i]=t[i];
+}
+void msort(Order a[], Order t[], int lo, int hi) {
+if(lo&gt;=hi)return;
+int m=lo+(hi-lo)/2;
+msort(a, t, lo, m);
+msort(a, t, m+1, hi);
+merge(a, t, lo, m, hi);
+}
+void qsort_rec(Order a[], int lo, int hi) {
+while(lo&lt;hi) {
+int p=a[lo+(hi-lo)/2].amount, i=lo, j=hi;
+while(i&lt;=j) {
+while((cmp++, a[i].amount&lt;p))i++;
+while((cmp++, a[j].amount&gt;p))j--;
+if(i&lt;=j) {
+Order t=a[i];
+a[i]=a[j];
+a[j]=t;
+i++;
+j--;
+}
+}
+if(j-lo&lt;hi-i) {
+if(lo&lt;j)qsort_rec(a, lo, j);
+lo=i;
+}
+else {
+if(i&lt;hi)qsort_rec(a, i, hi);
+hi=j;
+}
+}
+}
+void sift(Order a[], int n, int i) {
+for(;;) {
+int l=2*i+1, r=l+1, b=i;
+if(l&lt;n) {
+cmp++;
+if(a[l].amount&gt;a[b].amount)b=l;
+}
+if(r&lt;n) {
+cmp++;
+if(a[r].amount&gt;a[b].amount)b=r;
+}
+if(b==i)return;
+Order t=a[i];
+a[i]=a[b];
+a[b]=t;
+i=b;
+}
+}
+void heapsort(Order a[], int n) {
+for(int i=n/2-1;i&gt;=0;i--)sift(a, n, i);
+for(int e=n-1;e&gt;0;e--) {
+Order t=a[0];
+a[0]=a[e];
+a[e]=t;
+sift(a, e, 0);
+
+
+
+}
+}
+int is_sorted(Order a[], int n) {
+for(int i=1;i&lt;n;i++)if(a[i-1].amount&gt;a[i].amount)return 0;
+return 1;
+}
+int main(void) {
+int sizes[]= {
+1000, 100000, 1000000
+}
+;
+for(int z=0;z&lt;3;z++) {
+int n=sizes[z];
+Order *src=malloc((size_t)n*sizeof *src);
+Order *a=malloc((size_t)n*sizeof *a), *tmp=malloc((size_t)n*sizeof *tmp);
+if(!src||!a||!tmp)return 1;
+for(int pattern=0;pattern&lt;3;pattern++) {
+for(int i=0;i&lt;n;i++) {
+src[i].id=i;
+src[i].amount=pattern==0?rand():pattern==1?i:n-i;
+}
+for(int alg=0;alg&lt;6;alg++) {
+if(n==1000000&amp;&amp;alg&lt;3)continue;
+memcpy(a, src, (size_t)n*sizeof *a);
+cmp=0;
+clock_t st=clock();
+if(alg==0)bubble(a, n);
+else if(alg==1)insertion(a, n);
+else if(alg==2)selection(a, n);
+else if(alg==3)msort(a, tmp, 0, n-1);
+else if(alg==4)qsort_rec(a, 0, n-1);
+else heapsort(a, n);
+double sec=(double)(clock()-st)/CLOCKS_PER_SEC;
+const char *names[]= {
+&quot;bubble&quot;, &quot;insertion&quot;, &quot;selection&quot;, &quot;merge&quot;, &quot;quick&quot;, &quot;heap&quot;
+}
+;
+printf(&quot;%s n=%d pattern=%d sec=%.4f cmp=%lld sorted=%d\n&quot;,
+names[alg], n, pattern, sec, cmp, is_sorted(a, n));
+}
+}
+free(src);
+free(a);
+free(tmp);
+}
+return 0;
+}
